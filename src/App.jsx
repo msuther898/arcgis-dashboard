@@ -10,6 +10,7 @@ import { ClickrayAnalysis } from './components/Summary/ClickrayAnalysis';
 import { GroupList } from './components/Groups/GroupList';
 import { ContentTable } from './components/Content/ContentTable';
 import { ArchiveModal } from './components/Archive/ArchiveModal';
+import { ArchiveManager } from './components/Archive/ArchiveManager';
 import { Login } from './components/Login';
 
 const queryClient = new QueryClient({
@@ -29,6 +30,7 @@ function Dashboard() {
   const [serviceStatsMap, setServiceStatsMap] = useState({});
   const [archiveItems, setArchiveItems] = useState([]);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showArchiveManager, setShowArchiveManager] = useState(false);
 
   const orgId = org?.id;
 
@@ -148,6 +150,12 @@ function Dashboard() {
         <span className="text-sm text-gray-500">{org?.name}</span>
       </div>
       <div className="flex items-center gap-4">
+        <button
+          onClick={() => setShowArchiveManager(true)}
+          className="text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1"
+        >
+          📦 Archive Manager
+        </button>
         <span className="text-sm text-gray-600">{user?.username}</span>
         <button
           onClick={logout}
@@ -201,6 +209,10 @@ function Dashboard() {
           onClose={handleArchiveClose}
           onComplete={handleArchiveComplete}
         />
+      )}
+
+      {showArchiveManager && (
+        <ArchiveManager onClose={() => setShowArchiveManager(false)} />
       )}
     </AppLayout>
   );
