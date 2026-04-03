@@ -3,6 +3,7 @@ import { ContentFilters } from './ContentFilters';
 import { ContentRow } from './ContentRow';
 import { formatBytes, formatCost, calculateMonthlyCost, calculateMonthlyCredits } from '../../utils/formatters';
 import { isArchiveCandidate, isItemArchived } from '../../utils/archiveUtils';
+import { getItemUrl } from '../../services/arcgis';
 
 export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchiveSelected, onRefresh }) {
   const [filters, setFilters] = useState({
@@ -210,7 +211,7 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchive
       calculateMonthlyCredits(item.size, item.type).toFixed(2),
       calculateMonthlyCost(item.size, item.type).toFixed(2),
       item.id,
-      `https://geocam.maps.arcgis.com/home/item.html?id=${item.id}`
+      getItemUrl(item.id)
     ]);
 
     const csvContent = [
@@ -245,7 +246,7 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchive
         access: item.access,
         monthlyCredits: calculateMonthlyCredits(item.size, item.type),
         monthlyCost: calculateMonthlyCost(item.size, item.type),
-        url: `https://geocam.maps.arcgis.com/home/item.html?id=${item.id}`,
+        url: getItemUrl(item.id),
         isArchived: isItemArchived(item.id),
         isArchiveCandidate: isArchiveCandidate(item),
       })),

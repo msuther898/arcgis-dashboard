@@ -1,5 +1,13 @@
 const ORG_URL = import.meta.env.VITE_ARCGIS_ORG_URL || 'https://geocam.maps.arcgis.com';
 
+export function getOrgUrl() {
+  return ORG_URL;
+}
+
+export function getItemUrl(itemId) {
+  return `${ORG_URL}/home/item.html?id=${itemId}`;
+}
+
 // Token storage
 let cachedToken = null;
 let tokenExpiry = null;

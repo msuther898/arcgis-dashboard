@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { formatDate, formatBytes, formatCost, formatCredits, calculateMonthlyCost, getItemTypeIcon } from '../../utils/formatters';
 import { isArchiveCandidate, isItemArchived, getArchivedItemInfo } from '../../utils/archiveUtils';
+import { getItemUrl } from '../../services/arcgis';
 import { ServiceDetails } from '../FeatureService/ServiceDetails';
 
 export function ContentRow({ item, token, onServiceStats, selected, onSelect, showSelection }) {
@@ -56,7 +57,7 @@ export function ContentRow({ item, token, onServiceStats, selected, onSelect, sh
             <span className="text-lg">{getItemTypeIcon(item.type)}</span>
             <div className="flex items-center gap-2">
               <a
-                href={`https://geocam.maps.arcgis.com/home/item.html?id=${item.id}`}
+                href={getItemUrl(item.id)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-gray-900 max-w-xs truncate hover:text-blue-600 hover:underline"
