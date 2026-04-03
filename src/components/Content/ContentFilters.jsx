@@ -1,7 +1,7 @@
 export function ContentFilters({ filters, onFilterChange, owners = [], types = [] }) {
-  const { hasClickrays, type, sharing, owner, search } = filters;
+  const { hasClickrays, type, sharing, owner, search, archiveCandidates, showArchived } = filters;
 
-  const hasActiveFilters = hasClickrays || type || sharing || owner || search;
+  const hasActiveFilters = hasClickrays || type || sharing || owner || search || archiveCandidates || showArchived;
 
   return (
     <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -68,6 +68,30 @@ export function ContentFilters({ filters, onFilterChange, owners = [], types = [
         Has ClickRays
       </label>
 
+      <label className="flex items-center gap-2 text-sm text-amber-700 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={archiveCandidates || false}
+          onChange={(e) =>
+            onFilterChange({ ...filters, archiveCandidates: e.target.checked })
+          }
+          className="rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+        />
+        💾 Archive Candidates
+      </label>
+
+      <label className="flex items-center gap-2 text-sm text-purple-700 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={showArchived || false}
+          onChange={(e) =>
+            onFilterChange({ ...filters, showArchived: e.target.checked })
+          }
+          className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+        />
+        📦 Archived to MinIO
+      </label>
+
       {hasActiveFilters && (
         <button
           onClick={() =>
@@ -77,6 +101,8 @@ export function ContentFilters({ filters, onFilterChange, owners = [], types = [
               sharing: null,
               owner: null,
               search: '',
+              archiveCandidates: false,
+              showArchived: false,
             })
           }
           className="text-sm text-blue-600 hover:text-blue-800"

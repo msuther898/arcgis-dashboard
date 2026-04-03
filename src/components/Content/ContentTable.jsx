@@ -2,18 +2,23 @@ import { useState, useMemo, useCallback } from 'react';
 import { ContentFilters } from './ContentFilters';
 import { ContentRow } from './ContentRow';
 import { formatBytes, formatCost, calculateMonthlyCost, calculateMonthlyCredits } from '../../utils/formatters';
+import { isArchiveCandidate, isItemArchived } from '../../utils/archiveUtils';
 
-export function ContentTable({ items, token, isLoading, onStatsUpdate }) {
+export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchiveSelected }) {
   const [filters, setFilters] = useState({
     hasClickrays: false,
     type: null,
     sharing: null,
     owner: null,
     search: '',
+    archiveCandidates: false,
+    showArchived: false,
   });
 
   const [sortConfig, setSortConfig] = useState({ key: 'modified', direction: 'desc' });
   const [serviceStatsMap, setServiceStatsMap] = useState({});
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
 
   const handleServiceStats = useCallback((itemId, stats) => {
     setServiceStatsMap((prev) => {
@@ -63,6 +68,12 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate }) {
         if (!stats?.hasClickrays) {
           return false;
         }
+      }
+      if (filters.archiveCandidates && !isArchiveCandidate(item)) {
+        return false;
+      }
+      if (filters.showArchived && !isItemArchived(item.id)) {
+        return false;
       }
       return true;
     });
@@ -125,8 +136,27 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate }) {
       (sum, i) => sum + calculateMonthlyCost(i.size, i.type),
       0
     );
-    return { totalSize, totalViews, totalCredits, totalCost };
+    const archiveCandidateCount = filteredAndSortedItems.filter(i => isArchiveCandidate(i)).length;
+    const archivedCount = filteredAndSortedItems.filter(i => isItemArchived(i.id)).length;
+    const archivedSize = filteredAndSortedItems
+      .filter(i => isItemArchived(i.id))
+      .reduce((sum, i) => sum + (i.size || 0), 0);
+    const archivedCredits = filteredAndSortedItems
+      .filter(i => isItemArchived(i.id))
+      .reduce((sum, i) => sum + calculateMonthlyCredits(i.size, i.type), 0);
+    return { totalSize, totalViews, totalCredits, totalCost, archiveCandidateCount, archivedCount, archivedSize, archivedCredits };
   }, [filteredAndSortedItems]);
+
+  // Selection stats
+  const selectionStats = useMemo(() => {
+    const selectedItems = filteredAndSortedItems.filter(i => selectedIds.has(i.id));
+    const selectedSize = selectedItems.reduce((sum, i) => sum + (i.size || 0), 0);
+    const selectedCredits = selectedItems.reduce(
+      (sum, i) => sum + calculateMonthlyCredits(i.size, i.type),
+      0
+    );
+    return { count: selectedIds.size, size: selectedSize, credits: selectedCredits };
+  }, [filteredAndSortedItems, selectedIds]);
 
   const handleSort = (key) => {
     setSortConfig((prev) => ({
@@ -134,6 +164,38 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate }) {
       direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc',
     }));
   };
+
+  const handleSelect = useCallback((itemId, checked) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(itemId);
+      } else {
+        next.delete(itemId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    if (selectedIds.size === filteredAndSortedItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredAndSortedItems.map(i => i.id)));
+    }
+  }, [filteredAndSortedItems, selectedIds]);
+
+  const handleSelectArchiveCandidates = useCallback(() => {
+    const candidates = filteredAndSortedItems.filter(i => isArchiveCandidate(i));
+    setSelectedIds(new Set(candidates.map(i => i.id)));
+  }, [filteredAndSortedItems]);
+
+  const handleArchiveSelected = useCallback(() => {
+    const selectedItems = items.filter(i => selectedIds.has(i.id));
+    if (onArchiveSelected) {
+      onArchiveSelected(selectedItems);
+    }
+  }, [items, selectedIds, onArchiveSelected]);
 
   const SortHeader = ({ label, sortKey }) => (
     <th
@@ -177,6 +239,71 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate }) {
           <span className="font-medium">{formatCost(totals.totalCost)}</span>
           <span className="text-xs text-gray-400 ml-1">(@$0.10/credit)</span>
         </div>
+        {totals.archiveCandidateCount > 0 && (
+          <div className="bg-amber-50 px-3 py-2 rounded border border-amber-200">
+            <span className="text-amber-700">💾 Archive Candidates:</span>{' '}
+            <span className="font-medium text-amber-800">{totals.archiveCandidateCount}</span>
+          </div>
+        )}
+        {totals.archivedCount > 0 && (
+          <div className="bg-purple-50 px-3 py-2 rounded border border-purple-200">
+            <span className="text-purple-700">📦 In MinIO:</span>{' '}
+            <span className="font-medium text-purple-800">{totals.archivedCount}</span>
+            <span className="text-purple-600 text-xs ml-2">
+              ({formatBytes(totals.archivedSize)}, {totals.archivedCredits.toFixed(1)} credits/mo saved)
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Selection toolbar */}
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={() => setSelectionMode(!selectionMode)}
+          className={`px-3 py-1.5 text-sm rounded border ${
+            selectionMode
+              ? 'bg-blue-50 border-blue-300 text-blue-700'
+              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          {selectionMode ? '✓ Selection Mode' : 'Select Items'}
+        </button>
+
+        {selectionMode && (
+          <>
+            <button
+              onClick={handleSelectAll}
+              className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+            >
+              {selectedIds.size === filteredAndSortedItems.length ? 'Deselect All' : 'Select All'}
+            </button>
+            <button
+              onClick={handleSelectArchiveCandidates}
+              className="px-3 py-1.5 text-sm bg-amber-50 border border-amber-300 rounded hover:bg-amber-100 text-amber-700"
+            >
+              Select Archive Candidates
+            </button>
+            {selectedIds.size > 0 && (
+              <>
+                <span className="text-sm text-gray-500">
+                  {selectionStats.count} selected ({formatBytes(selectionStats.size)}, {selectionStats.credits.toFixed(1)} credits/mo)
+                </span>
+                <button
+                  onClick={handleArchiveSelected}
+                  className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                >
+                  📦 Archive to MinIO
+                </button>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Clear
+                </button>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       {isLoading ? (
@@ -191,6 +318,16 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate }) {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  {selectionMode && (
+                    <th className="py-3 px-2 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === filteredAndSortedItems.length && filteredAndSortedItems.length > 0}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </th>
+                  )}
                   <SortHeader label="Name" sortKey="title" />
                   <SortHeader label="Type" sortKey="type" />
                   <SortHeader label="Owner" sortKey="owner" />
@@ -207,6 +344,9 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate }) {
                     item={item}
                     token={token}
                     onServiceStats={handleServiceStats}
+                    selected={selectedIds.has(item.id)}
+                    onSelect={handleSelect}
+                    showSelection={selectionMode}
                   />
                 ))}
               </tbody>

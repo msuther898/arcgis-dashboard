@@ -9,6 +9,7 @@ import { SummaryDashboard } from './components/Summary/SummaryDashboard';
 import { ClickrayAnalysis } from './components/Summary/ClickrayAnalysis';
 import { GroupList } from './components/Groups/GroupList';
 import { ContentTable } from './components/Content/ContentTable';
+import { ArchiveModal } from './components/Archive/ArchiveModal';
 import { Login } from './components/Login';
 
 const queryClient = new QueryClient({
@@ -26,6 +27,8 @@ function Dashboard() {
 
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [serviceStatsMap, setServiceStatsMap] = useState({});
+  const [archiveItems, setArchiveItems] = useState([]);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const orgId = org?.id;
 
@@ -108,6 +111,22 @@ function Dashboard() {
     setServiceStatsMap(statsMap);
   }, []);
 
+  const handleArchiveSelected = useCallback((items) => {
+    setArchiveItems(items);
+    setShowArchiveModal(true);
+  }, []);
+
+  const handleArchiveClose = useCallback(() => {
+    setShowArchiveModal(false);
+    setArchiveItems([]);
+  }, []);
+
+  const handleArchiveComplete = useCallback((archives) => {
+    // Refresh content after archiving
+    console.log('Archive complete:', archives);
+    // Could trigger a refetch of content here if needed
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -171,8 +190,18 @@ function Dashboard() {
           token={token}
           isLoading={contentLoading}
           onStatsUpdate={handleStatsUpdate}
+          onArchiveSelected={handleArchiveSelected}
         />
       </div>
+
+      {showArchiveModal && (
+        <ArchiveModal
+          items={archiveItems}
+          token={token}
+          onClose={handleArchiveClose}
+          onComplete={handleArchiveComplete}
+        />
+      )}
     </AppLayout>
   );
 }
