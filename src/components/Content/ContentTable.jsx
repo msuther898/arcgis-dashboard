@@ -4,7 +4,7 @@ import { ContentRow } from './ContentRow';
 import { formatBytes, formatCost, calculateMonthlyCost, calculateMonthlyCredits } from '../../utils/formatters';
 import { isArchiveCandidate, isItemArchived } from '../../utils/archiveUtils';
 
-export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchiveSelected }) {
+export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchiveSelected, onRefresh }) {
   const [filters, setFilters] = useState({
     hasClickrays: false,
     type: null,
@@ -213,12 +213,28 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchive
 
   return (
     <div>
-      <ContentFilters
-        filters={filters}
-        onFilterChange={setFilters}
-        owners={owners}
-        types={types}
-      />
+      <div className="flex items-center justify-between mb-2">
+        <ContentFilters
+          filters={filters}
+          onFilterChange={setFilters}
+          owners={owners}
+          types={types}
+        />
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1"
+          >
+            {isLoading ? (
+              <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></span>
+            ) : (
+              '↻'
+            )}
+            Refresh
+          </button>
+        )}
+      </div>
 
       {/* Summary stats */}
       <div className="flex flex-wrap gap-4 mb-4 text-sm">

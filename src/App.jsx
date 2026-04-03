@@ -45,11 +45,11 @@ function Dashboard() {
   const { data: groups, isLoading: groupsLoading } = useGroups(token, orgId);
 
   // Fetch content (all or filtered by group)
-  const { data: allContent, isLoading: allContentLoading } = useAllContent(
+  const { data: allContent, isLoading: allContentLoading, refetch: refetchAllContent } = useAllContent(
     token,
     orgId
   );
-  const { data: groupContent, isLoading: groupContentLoading } = useContent(
+  const { data: groupContent, isLoading: groupContentLoading, refetch: refetchGroupContent } = useContent(
     token,
     orgId,
     { groupId: selectedGroup }
@@ -57,6 +57,7 @@ function Dashboard() {
 
   const content = selectedGroup ? groupContent : allContent;
   const contentLoading = selectedGroup ? groupContentLoading : allContentLoading;
+  const refetchContent = selectedGroup ? refetchGroupContent : refetchAllContent;
 
   // Get all feature services for clickray analysis
   const featureServices = useMemo(() => {
@@ -199,6 +200,7 @@ function Dashboard() {
           isLoading={contentLoading}
           onStatsUpdate={handleStatsUpdate}
           onArchiveSelected={handleArchiveSelected}
+          onRefresh={refetchContent}
         />
       </div>
 

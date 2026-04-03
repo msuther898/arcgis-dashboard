@@ -55,9 +55,15 @@ export function ContentRow({ item, token, onServiceStats, selected, onSelect, sh
             )}
             <span className="text-lg">{getItemTypeIcon(item.type)}</span>
             <div className="flex items-center gap-2">
-              <div className="font-medium text-gray-900 max-w-xs truncate" title={item.title}>
+              <a
+                href={`https://geocam.maps.arcgis.com/home/item.html?id=${item.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-gray-900 max-w-xs truncate hover:text-blue-600 hover:underline"
+                title={`${item.title} - Click to open in ArcGIS Online`}
+              >
                 {item.title}
-              </div>
+              </a>
               {isArchived && (
                 <span
                   className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
