@@ -197,6 +197,69 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchive
     }
   }, [items, selectedIds, onArchiveSelected]);
 
+  const handleExportCSV = useCallback(() => {
+    const headers = ['Title', 'Type', 'Owner', 'Modified', 'Size (bytes)', 'Size', 'Views', 'Credits/mo', 'Cost/mo', 'ID', 'URL'];
+    const rows = filteredAndSortedItems.map(item => [
+      item.title,
+      item.type,
+      item.owner,
+      new Date(item.modified).toISOString(),
+      item.size || 0,
+      formatBytes(item.size),
+      item.numViews || 0,
+      calculateMonthlyCredits(item.size, item.type).toFixed(2),
+      calculateMonthlyCost(item.size, item.type).toFixed(2),
+      item.id,
+      `https://geocam.maps.arcgis.com/home/item.html?id=${item.id}`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `arcgis-content-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredAndSortedItems]);
+
+  const handleExportJSON = useCallback(() => {
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      totalItems: filteredAndSortedItems.length,
+      totalSize: totals.totalSize,
+      totalCredits: totals.totalCredits,
+      totalCost: totals.totalCost,
+      items: filteredAndSortedItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        owner: item.owner,
+        modified: item.modified,
+        size: item.size,
+        numViews: item.numViews,
+        access: item.access,
+        monthlyCredits: calculateMonthlyCredits(item.size, item.type),
+        monthlyCost: calculateMonthlyCost(item.size, item.type),
+        url: `https://geocam.maps.arcgis.com/home/item.html?id=${item.id}`,
+        isArchived: isItemArchived(item.id),
+        isArchiveCandidate: isArchiveCandidate(item),
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `arcgis-content-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredAndSortedItems, totals]);
+
   const SortHeader = ({ label, sortKey }) => (
     <th
       className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
@@ -220,20 +283,34 @@ export function ContentTable({ items, token, isLoading, onStatsUpdate, onArchive
           owners={owners}
           types={types}
         />
-        {onRefresh && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1"
+            onClick={handleExportCSV}
+            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
           >
-            {isLoading ? (
-              <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></span>
-            ) : (
-              '↻'
-            )}
-            Refresh
+            Export CSV
           </button>
-        )}
+          <button
+            onClick={handleExportJSON}
+            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+          >
+            Export JSON
+          </button>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1"
+            >
+              {isLoading ? (
+                <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></span>
+              ) : (
+                '↻'
+              )}
+              Refresh
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary stats */}
